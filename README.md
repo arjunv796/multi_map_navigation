@@ -1,103 +1,81 @@
-Multi-Map Navigation for ROS 2
-Seamlessly Guiding Robots Across Disconnected Worlds
+Multi-Map Navigation for ROS 2 — Seamlessly Guiding Robots Across Disconnected Worlds
 
-Navigating complex, multi-level environments like office buildings or warehouses is a significant challenge for autonomous robots. Standard navigation systems like Nav2 excel at moving within a single, continuous map but struggle when a robot must transition between disconnected spaces (e.g., different floors via an elevator).
+1. Overview
+Navigating complex, multi-level environments like office buildings or warehouses is a significant challenge for autonomous robots.
+Standard navigation systems like Nav2 excel at moving within a single, continuous map but struggle when a robot must transition between disconnected spaces (e.g., different floors via an elevator).
 
-This project offers an elegant, high-level solution: a multi-map coordinator that intelligently manages navigation goals across these separate maps. It acts as a "brain" on top of Nav2, handling the complex logic of map transitions so the rest of the system doesn't have to.
-The Core Concept: The Wormhole System
+This project offers a high-level multi-map coordinator that intelligently manages navigation goals across separate maps. It acts as a “brain” on top of Nav2, handling complex logic for map transitions so the rest of the system doesn’t have to.
 
-At the heart of this project is the "wormhole" concept. Think of wormholes as virtual doorways or elevators that connect your maps.
+2. Core Concept — The Wormhole System
+At the heart of this project is the "wormhole" concept — virtual doorways or elevators that connect your maps.
 
-    A SQLite database stores the precise coordinates of these connection points on each map.
+1. A SQLite database stores the precise coordinates of these connection points on each map.
+2. When the robot is on Map A and receives a goal for Map B, the logic is:
+   1. Look up the wormhole connecting Map A to Map B.
+   2. Navigate the robot to the wormhole's location on Map A.
+   3. Once it arrives, trigger the map-switching process (e.g., call an elevator, load Map B in the map server).
+   4. Proceed to the final goal on Map B.
 
-    When the robot is on "Map A" and receives a goal for "Map B," the server's logic is simple:
+Benefit: This approach cleanly separates high-level task planning (which map to be on) from low-level navigation (how to move within a map).
 
-        Look up the wormhole connecting Map A to Map B.
+3. Key Features
 
-        Navigate the robot to the wormhole's location on Map A.
+1. Strategic Goal Coordination
+   - Implements a robust ROS 2 Action Server (/navigate_to_map) as the entry point for all long-range navigation tasks.
 
-        Once it arrives, trigger the map-switching process (e.g., call an elevator, notify the map server to load Map B).
+2. Intelligent Map Transitioning
+   - Automatically plans and executes steps to move between maps using the wormhole system.
 
-        Proceed to the final goal on Map B.
+3. Persistent Data Storage
+   - Lightweight SQLite database maintains persistent, editable records of wormhole coordinates.
 
-This approach cleanly separates the high-level task planning (which map to be on) from the low-level navigation (how to move on the current map).
-Key Features
+4. Composable & Efficient
+   - Designed as a ROS 2 component node; can run standalone or in a component container for zero-copy communication.
 
-    Strategic Goal Coordination: Implements a robust ROS 2 action server (/navigate_to_map) that serves as the primary entry point for all long-range navigation tasks.
+5. Ready to Deploy
+   - Includes a pre-configured Python launch file for quick startup and parameter configuration.
 
-    Intelligent Map Transitioning: Automatically plans and executes the necessary steps to move a robot between maps using the wormhole system.
+4. Getting Started
 
-    Persistent Data Storage: Leverages a lightweight SQLite database to maintain a persistent and easily editable record of map connection points.
+4.1 Prerequisites
+1. ROS 2 Humble Hawksbill
+2. Nav2 (Navigation2) Stack
+3. SQLite3 Development Library
+   sudo apt-get install libsqlite3-dev
 
-    Composable & Efficient: Designed as a ROS 2 component, allowing it to be run as a standalone node or loaded into a component container for optimized, zero-copy communication.
+4.2 Installation
 
-    Ready to Deploy: Includes a pre-configured Python launch file for straightforward startup and parameter configuration.
+1. Clone the Repository
+   cd ~/your_ros2_workspace/src
+   git clone <your-repository-url>
 
-Getting Started
-Prerequisites
+2. Install Dependencies
+   cd ~/your_ros2_workspace
+   rosdep install --from-paths src --ignore-src -r -y
 
-    ROS 2 Humble Hawksbill
+3. Build the Package
+   cd ~/your_ros2_workspace
+   colcon build
 
-    The Nav2 (Navigation2) Stack
+4.3 How to Use
 
-    SQLite3 Development Library (sudo apt-get install libsqlite3-dev)
-
-Installation
-
-    Clone the Repository:
-    Clone this project into your ROS 2 workspace's src directory.
-
-    cd ~/your_ros2_workspace/src
-    git clone <your-repository-url>
-
-    Install Dependencies:
-    Navigate to your workspace root and let rosdep handle dependency installation.
-
-    cd ~/your_ros2_workspace
-    rosdep install --from-paths src --ignore-src -r -y
-
-    Build the Package:
-    Compile the workspace with colcon.
-
-    cd ~/your_ros2_workspace
-    colcon build
-
-How to Use
 1. Source Your Workspace
-
-In every new terminal, source your workspace to make its packages available.
-
-source ~/your_ros2_workspace/install/setup.bash
+   source ~/your_ros2_workspace/install/setup.bash
 
 2. Launch the Server
+   ros2 launch multi_map_navigation multi_map_server.launch.py
+   - This will start the multi_map_server node and load your wormhole.db file.
 
-Use the provided launch file to start the multi_map_server. This command automatically finds and passes the path to your wormhole.db to the node.
-
-ros2 launch multi_map_navigation multi_map_server.launch.py
-
-You'll see log output confirming the node is running and the action server is active and waiting for goals.
 3. Send a Test Goal
+   ros2 action send_goal /navigate_to_map multi_map_navigation/action/NavigateToMap    '{ "map_id": "map1", "goal_pose": { "header": { "frame_id": "map" }, "pose": { "position": { "x": 1.0, "y": 1.0, "z": 0.0 }, "orientation": { "w": 1.0 } } } }'
 
-From another terminal, you can send a test goal using the CLI. This command simulates an application requesting the robot to move to position (1.0, 1.0) on map1.
+5. Project Roadmap
 
-ros2 action send_goal /navigate_to_map multi_map_navigation/action/NavigateToMap '{
-  "map_id": "map1",
-  "goal_pose": {
-    "header": { "frame_id": "map" },
-    "pose": {
-      "position": { "x": 1.0, "y": 1.0, "z": 0.0 },
-      "orientation": { "w": 1.0 }
-    }
-  }
-}'
+1. Full Nav2 Integration
+   - Directly connect action server output to Nav2’s NavigateToPose for seamless execution.
 
-Observe the server's terminal to see how it receives and processes the request.
-Project Roadmap
+2. Dynamic Wormhole Management
+   - Implement a ROS 2 service to add, remove, or update wormhole locations in real time.
 
-This project provides a solid foundation for multi-map navigation. Future enhancements could include:
-
-    Full Nav2 Integration: Directly connecting the server's output to Nav2's NavigateToPose action client for seamless, end-to-end execution.
-
-    Dynamic Wormhole Management: Implementing a ROS 2 service to allow for adding, removing, or updating wormhole locations in the database on-the-fly.
-
-    Advanced Map Transition Logic: Developing more sophisticated plugins for different transition types, such as automatic door opening or elevator control.
+3. Advanced Map Transition Logic
+   - Develop plugins for different transitions, such as automatic doors or elevator control.
